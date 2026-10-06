@@ -24,6 +24,18 @@ public class EnemyAI : MonoBehaviour
     public float hitDamage = 10f;        // damage dealt to the WEAPON
     public bool staggerOnHit = true;     // captain: set false so he can't be interrupted
     public float knockbackForce = 6f;
+    public float staggerCooldown = 0f;   // NEW: 0 = every hit can stagger. 1.5 = a hit can only interrupt him once every 1.5 s (no stun-lock)
+
+    // NEW: tick "Can Enrage" on the CAPTAIN prefab only. Grunts leave it off and behave exactly as before.
+    [Header("Enrage (Captain only)")]
+    public bool canEnrage = false;
+    [Range(0.1f, 0.9f)] public float enrageAt = 0.5f;   // enrages when HP falls below this fraction
+    public float enrageSpeedMult = 1.3f;
+    public float enrageWindupMult = 0.75f;
+    public float enrageRecoverMult = 0.8f;
+    public float enrageScaleMult = 1.1f;                // he looks a little bigger when angry
+    public float minWindup = 0.45f;                     // never faster than a dodge can beat
+    public float minRecover = 0.35f;
 
     [Header("Drops")]
     public int orbCount = 3;
@@ -43,6 +55,8 @@ public class EnemyAI : MonoBehaviour
     Color baseColor = Color.white;
     FlashTint tint;
     ModelAnimator anim;
+    bool enraged;          // NEW
+    float nextStagger;     // NEW
 
     void Awake()
     {
@@ -139,12 +153,31 @@ public class EnemyAI : MonoBehaviour
         knock = away.normalized * knockbackForce;
         StartCoroutine(Flash());
         if (hp <= 0f) { Die(); return; }
-        if (staggerOnHit)
+
+        // NEW: angry at low health (Captain only)
+        if (canEnrage && !enraged && hp <= maxHp * enrageAt) Enrage();
+
+        // CHANGED: the stagger now respects staggerCooldown (0 keeps the old behaviour)
+        if (staggerOnHit && Time.time >= nextStagger)
         {
+            nextStagger = Time.time + staggerCooldown;
             state = State.Recover;
             timer = 0.35f;
             agent.isStopped = true;
         }
+    }
+
+    // NEW
+    void Enrage()
+    {
+        enraged = true;
+        moveSpeed *= enrageSpeedMult;
+        agent.speed = moveSpeed;                                         // the agent keeps its own copy of the speed
+        windupTime = Mathf.Max(minWindup, windupTime * enrageWindupMult);
+        recoverTime = Mathf.Max(minRecover, recoverTime * enrageRecoverMult);
+        baseScale *= enrageScaleMult;
+        visual.localScale = baseScale;
+        AudioManager.Play("windup", 1f);                                 // optional: swap for a roar sound
     }
 
     void Die()

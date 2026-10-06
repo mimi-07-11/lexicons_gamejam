@@ -14,6 +14,9 @@ public class PlayerController : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         move = new InputAction("Move", InputActionType.Value);
         move.AddCompositeBinding("2DVector")
+            .With("Up", "<Keyboard>/upArrow").With("Down", "<Keyboard>/downArrow")
+            .With("Left", "<Keyboard>/leftArrow").With("Right", "<Keyboard>/rightArrow");
+        move.AddCompositeBinding("2DVector")
             .With("Up", "<Keyboard>/w").With("Down", "<Keyboard>/s")
             .With("Left", "<Keyboard>/a").With("Right", "<Keyboard>/d");
         move.AddBinding("<Gamepad>/leftStick");
